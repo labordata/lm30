@@ -67,9 +67,12 @@ update_filing: filing.csv | lm30.db
 # Every discovered filer was discovered FROM a filing, so its detail
 # feed must yield at least one item; fewer items than filers means the
 # crawl was blocked (OLMS 403s), not that there was nothing to fetch.
-filing.csv: sr_nums.txt
+filing.csv: filing.jl
+	jq -rs '(map(keys) | add | unique) as $$cols | map(. as $$row | $$cols | map($$row[.])) as $$rows | $$cols, $$rows[] | @csv' $< > $@
+
+filing.jl: sr_nums.txt
 	scrapy crawl filings_incremental -L INFO -a sr_nums_file=$< -O $@
-	@[ "$$(( $$(wc -l < $@) - 1 ))" -ge "$$(wc -l < $<)" ] || \
+	@[ "$$(wc -l < $@)" -ge "$$(wc -l < $<)" ] || \
 	    (echo "ERROR: $@ has fewer filings than discovered filers; crawl was likely blocked" >&2 && exit 1)
 
 sr_nums.txt: | lm30.db

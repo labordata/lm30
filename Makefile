@@ -17,6 +17,13 @@ filer.csv :
 	scrapy crawl filers -L INFO -O $@
 	@[ "$$(wc -l < $@)" -gt 1 ] || (echo "ERROR: $@ is empty" >&2 && exit 1)
 
-filing.csv :
+# jl is lossless: the CSV header is the union of keys across ALL rows
+# (scrapy's CSV feed would silently truncate to the first item's
+# fields), so a new upstream field becomes a loud unknown-column error
+# in the merge instead of silent loss.
+filing.csv : filing.jl
+	jq -rs '(map(keys) | add | unique) as $$cols | map(. as $$row | $$cols | map($$row[.])) as $$rows | $$cols, $$rows[] | @csv' $< > $@
+
+filing.jl :
 	scrapy crawl filings -L INFO -O $@
 	@[ "$$(wc -l < $@)" -gt 1 ] || (echo "ERROR: $@ is empty" >&2 && exit 1)
