@@ -57,8 +57,12 @@ fk-check:
 update_filer: filer.csv | lm30.db
 	python scripts/merge_csv.py lm30.db filer --replace --ignore filerType < $<
 
-update_filing: filing.csv | lm30.db
-	python scripts/merge_csv.py lm30.db filing --ignore formLink < $<
+update_filing: filing.csv form.json | lm30.db
+	python scripts/merge_csv.py lm30.db filing --ignore formLink --ignore detailed_form_data < filing.csv
+	python scripts/load_json.py lm30.db form.json
+	sqlite3 lm30.db "DELETE FROM part_a WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM part_b WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM part_c WHERE rptId NOT IN (SELECT rptId FROM filing);"
+	@test "$$(sqlite3 lm30.db 'SELECT count(*) FROM part_c;')" = "0" || \
+	    (echo "ERROR: part_c is populated but its parser is unvalidated; validate the modeled labels against rptId(s): $$(sqlite3 lm30.db 'SELECT group_concat(rptId) FROM part_c;')" >&2 && exit 1)
 
 # ============================================================================
 # Spider outputs
@@ -68,7 +72,7 @@ update_filing: filing.csv | lm30.db
 # feed must yield at least one item; fewer items than filers means the
 # crawl was blocked (OLMS 403s), not that there was nothing to fetch.
 filing.csv: filing.jl
-	jq -rs '(map(keys) | add | unique) as $$cols | map(. as $$row | $$cols | map($$row[.])) as $$rows | $$cols, $$rows[] | @csv' $< > $@
+	jq -rs 'map(del(.detailed_form_data)) | (map(keys) | add | unique) as $$cols | map(. as $$row | $$cols | map($$row[.])) as $$rows | $$cols, $$rows[] | @csv' $< > $@
 
 filing.jl: sr_nums.txt
 	scrapy crawl filings_incremental -L INFO -a sr_nums_file=$< -O $@
@@ -89,3 +93,5 @@ lm30.db:
 	curl -fsSL -o prev.zip $(PRIOR_DB_URL)
 	unzip -o prev.zip lm30.db
 	rm -f prev.zip
+
+include common.mk
