@@ -40,14 +40,12 @@ jobs:
         run: |
           zip lm30.db.zip lm30.db
 
-      # TODO: create a `nightly` release in labordata/lm30 and replace
-      # RELEASE_ID below with its numeric id before the first publish
       - name: release
         if: github.ref == 'refs/heads/main'
         uses: WebFreak001/deploy-nightly@v3.0.0
         with:
-          upload_url: https://uploads.github.com/repos/labordata/lm30/releases/RELEASE_ID/assets{?name,label}
-          release_id: RELEASE_ID
+          upload_url: https://uploads.github.com/repos/labordata/lm30/releases/338743208/assets{?name,label}
+          release_id: 338743208
           asset_path: ./lm30.db.zip # path to archive to upload
           asset_name: lm30.db.zip # name to upload the release as
           asset_content_type: application/zip # required by GitHub API
