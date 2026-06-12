@@ -1,0 +1,50 @@
+# Monthly from-scratch rebuild. The nightly incremental update
+# (main.yml) can't see paper LM-30s; this full row crawl rebuilds the
+# published database completely. Unlike the sibling pipelines, LM-30
+# archives no documents, so the from-scratch build fits a CI job.
+
+name: Full Database Rebuild
+
+concurrency:
+  group: database-build
+
+on:
+  schedule:
+    - cron: '45 10 2 * *'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: install requirements
+        run: |
+          pip install -r requirements.txt
+
+      - name: build database
+        run: make lm30.db
+
+      - name: setup asset
+        run: |
+          zip lm30.db.zip lm30.db
+
+      # TODO: create a `nightly` release in labordata/lm30 and replace
+      # RELEASE_ID below with its numeric id before the first publish
+      - name: release
+        if: github.ref == 'refs/heads/main'
+        uses: WebFreak001/deploy-nightly@v3.0.0
+        with:
+          upload_url: https://uploads.github.com/repos/labordata/lm30/releases/RELEASE_ID/assets{?name,label}
+          release_id: RELEASE_ID
+          asset_path: ./lm30.db.zip # path to archive to upload
+          asset_name: lm30.db.zip # name to upload the release as
+          asset_content_type: application/zip # required by GitHub API

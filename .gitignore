@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+lm30.db
+prev.zip
+*.csv
+*.jl
+sr_nums.txt
+.scrapy/
+reports/
