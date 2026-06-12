@@ -9,7 +9,7 @@ lm30.db : schema.sql filer.csv filing.csv
 	rm -f $@
 	sqlite3 $@ < schema.sql
 	python scripts/merge_csv.py $@ filer --replace --ignore filerType < filer.csv
-	python scripts/merge_csv.py $@ filing --replace --ignore formLink < filing.csv
+	python scripts/merge_csv.py $@ filing --ignore formLink < filing.csv
 	sqlite-utils vacuum $@
 	@test -z "$$(sqlite3 $@ 'PRAGMA foreign_key_check;')" && echo "fk-check: $@ is clean"
 

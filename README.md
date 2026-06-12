@@ -18,6 +18,13 @@ and [lm20](https://github.com/labordata/lm20).
   report. Documents are not archived (yet); the `file_*` columns are
   reserved for that.
 
+Amendments: an LM-30 amendment gets a **new rptId**, and the filer detail
+feed serves only the latest version of each `(srFilerId, yrCovered)` chain
+(GetLM30AmendmentReportsServlet exposes the full chain, superseded versions
+included — a candidate `amendment` table for a later phase). The filing
+merge therefore evicts all prior versions of an incoming row's chain, so
+superseded versions never linger.
+
 This is the filing *index*, not the form contents: an LM-30's substance —
 the Part A/B/C disclosure blocks (interests in and payments from represented
 employers, business dealings with the union or its trusts, payments from

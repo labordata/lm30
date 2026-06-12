@@ -58,7 +58,7 @@ update_filer: filer.csv | lm30.db
 	python scripts/merge_csv.py lm30.db filer --replace --ignore filerType < $<
 
 update_filing: filing.csv | lm30.db
-	python scripts/merge_csv.py lm30.db filing --replace --ignore formLink < $<
+	python scripts/merge_csv.py lm30.db filing --ignore formLink < $<
 
 # ============================================================================
 # Spider outputs
