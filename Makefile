@@ -12,8 +12,10 @@ lm30.db : schema.sql filer.csv filing.csv form.json
 	python scripts/merge_csv.py $@ filing --ignore formLink --ignore detailed_form_data < filing.csv
 	python scripts/load_json.py $@ form.json
 	sqlite3 $@ "DELETE FROM part_a WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM part_b WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM part_c WHERE rptId NOT IN (SELECT rptId FROM filing);"
-	@test "$$(sqlite3 $@ 'SELECT count(*) FROM part_c;')" = "0" || \
-	    (echo "ERROR: part_c is populated but its parser is unvalidated; validate the modeled labels against rptId(s): $$(sqlite3 $@ 'SELECT group_concat(rptId) FROM part_c;')" >&2 && exit 1)
+	python scripts/amended_chains.py $@ > amended_chains.txt
+	scrapy crawl amendments -L INFO -a chains_file=amended_chains.txt -O amendment.jl
+	jq -rs '(map(keys) | add | unique) as $$cols | map(. as $$row | $$cols | map($$row[.])) as $$rows | $$cols, $$rows[] | @csv' amendment.jl > amendment.csv
+	python scripts/merge_csv.py $@ amendment --ignore formId --ignore formLink --ignore registerDate < amendment.csv
 	sqlite-utils vacuum $@
 	@test -z "$$(sqlite3 $@ 'PRAGMA foreign_key_check;')" && echo "fk-check: $@ is clean"
 

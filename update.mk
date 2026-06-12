@@ -61,8 +61,6 @@ update_filing: filing.csv form.json | lm30.db
 	python scripts/merge_csv.py lm30.db filing --ignore formLink --ignore detailed_form_data < filing.csv
 	python scripts/load_json.py lm30.db form.json
 	sqlite3 lm30.db "DELETE FROM part_a WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM part_b WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM part_c WHERE rptId NOT IN (SELECT rptId FROM filing);"
-	@test "$$(sqlite3 lm30.db 'SELECT count(*) FROM part_c;')" = "0" || \
-	    (echo "ERROR: part_c is populated but its parser is unvalidated; validate the modeled labels against rptId(s): $$(sqlite3 lm30.db 'SELECT group_concat(rptId) FROM part_c;')" >&2 && exit 1)
 
 # ============================================================================
 # Spider outputs

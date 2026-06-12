@@ -18,6 +18,10 @@ IDENTITY = {
     "ZIP": "zip",
 }
 
+# Part C labels its address "Mailing Address" rather than "Street Address".
+PART_C_IDENTITY = dict(IDENTITY, **{"Mailing Address": "street"})
+del PART_C_IDENTITY["Street Address"]
+
 
 class LM30(Spider):
     """One row per LM-30 filing, from each filer's detail feed, enriched
@@ -226,29 +230,25 @@ class LM30Report:
 
     @classmethod
     def _part_c(cls, response):
-        # MODELED, NOT YET VALIDATED against a real populated Part C (they
-        # are rare). The Makefile/update.mk tripwire asserts part_c is
-        # empty, so the first real one fails the build loudly with an
-        # rptId to validate these labels against. See PR notes.
         out = []
         for entry in cls._entries(response, "PART C"):
             row_data = {}
             for row in cls._rows(entry):
+                if cls._norm(row).startswith("13.b. Type of entity"):
+                    entity = cls._entity_type(row)
+                    if entity:
+                        row_data["entity_type"] = entity
+                    continue
                 for label, key in (
-                    ("13. Name of employer", "other_employer"),
                     (
-                        "14.a. Nature of interest, transaction, benefit, "
-                        "arrangement, income, or loan.",
-                        "nature_of_interest",
+                        "Name of employer or labor relations consultant",
+                        "other_employer",
                     ),
-                    (
-                        "14.b. Amount or value of interest, transaction, "
-                        "benefit, arrangement, income, or loan.",
-                        "amount",
-                    ),
+                    ("14.a. Nature of payment", "nature_of_payment"),
+                    ("14.b. Amount or value of payment", "amount"),
                 ):
                     cls._set(row_data, row, label, key)
-                for label, key in IDENTITY.items():
+                for label, key in PART_C_IDENTITY.items():
                     cls._set(row_data, row, label, key)
             out.append(row_data)
         return out
@@ -306,3 +306,16 @@ class LM30Report:
             if box:
                 checked.append(key)
         return ",".join(checked)
+
+    @staticmethod
+    def _entity_type(row):
+        # Part C item 13.b: a checkbox precedes each label, one checked.
+        for label, key in (("an employer or", "employer"), ("a consultant?", "consultant")):
+            box = row.xpath(
+                ".//div[contains(normalize-space(.), $label)]"
+                "/preceding-sibling::div[1]//input[@checked]",
+                label=label,
+            )
+            if box:
+                return key
+        return ""

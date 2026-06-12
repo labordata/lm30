@@ -60,7 +60,20 @@ def test_nil_part_is_empty_list():
     assert data["part_b"]
 
 
-def test_part_c_absent_in_samples():
-    # Tripwire expectation: none of the on-hand samples populate Part C.
+def test_part_c_other_employer():
+    # Part C uses "Mailing Address" (not "Street Address"), the item-13.b
+    # employer/consultant checkbox, and "14.a/b ... payment" labels.
+    data = LM30Report.parse(_report("942003.html"))
+    (c,) = data["part_c"]
+    assert c["other_employer"] == "PSE&G"
+    assert c["street"] == "80 Park Plaza,"
+    assert c["city"] == "NEWARK"
+    assert c["entity_type"] == "employer"
+    assert c["nature_of_payment"] == "Football tickets and meals"
+    assert c["amount"] == "$1,274"
+
+
+def test_part_c_absent_when_nil():
+    # Part-A/B-only filings leave Part C empty.
     for name in ("941060.html", "942119.html", "941871.html"):
         assert LM30Report.parse(_report(name))["part_c"] == []

@@ -73,9 +73,9 @@ CREATE TABLE IF NOT EXISTS "part_b" (
    [amount_of_interest] TEXT,
    PRIMARY KEY ([rptId], [part_b_order])
 );
--- Part C is MODELED, not yet validated against a real populated sample
--- (they are rare); the Makefile / update.mk tripwire asserts it is empty
--- so the first real one fails the build loudly. See the parser notes.
+-- Part C: an other employer (or labor relations consultant) from whom a
+-- payment would create a conflict, with the entity type and the
+-- nature/amount of payment. (Part C labels its address "Mailing Address".)
 CREATE TABLE IF NOT EXISTS "part_c" (
    [rptId] INTEGER REFERENCES [filing]([rptId]),
    [part_c_order] INTEGER,
@@ -86,7 +86,29 @@ CREATE TABLE IF NOT EXISTS "part_c" (
    [city] TEXT,
    [state] TEXT,
    [zip] TEXT,
-   [nature_of_interest] TEXT,
+   [entity_type] TEXT,
+   [nature_of_payment] TEXT,
    [amount] TEXT,
    PRIMARY KEY ([rptId], [part_c_order])
+);
+-- amendment: the full chain of each amended filing, including the
+-- superseded versions the filer detail feed hides (it serves only the
+-- latest). Each version keeps its own rptId; the latest version's row
+-- duplicates filing. Join history to the current filing on
+-- (srFilerId, yrCovered). Backfilled from GetLM30AmendmentReportsServlet
+-- for chains where filing.amended = 'Y'.
+CREATE TABLE IF NOT EXISTS "amendment" (
+   [rptId] INTEGER PRIMARY KEY,
+   [srFilerId] INTEGER REFERENCES [filer]([srFilerId]),
+   [yrCovered] INTEGER,
+   [amendment] INTEGER,
+   [amended] TEXT,
+   [beginDate] TEXT,
+   [endDate] TEXT,
+   [receiveDate] TEXT,
+   [formFiled] TEXT,
+   [unionName] TEXT,
+   [unionCity] TEXT,
+   [unionState] TEXT,
+   [filing_url] TEXT
 );
