@@ -36,10 +36,15 @@ are parsed from each electronic filing's report HTML into per-entry tables
 - `other_employer_payment` (form Part C) — payments from other employers
   that would raise a conflict
 
-Each is keyed `(rptId, entry_order)`. Caveats: many filings are nil reports
-with no entries; paper filings have no parseable report; and the parser
-handles the "Revised 2011" markup — older electronic filings' coverage is
-not yet measured.
+Each is keyed `(rptId, entry_order)`. Coverage: OLMS serves each report as
+either the "Revised 2011" HTML (which this parser reads) or a PDF, and the
+filing index doesn't distinguish them. Sampling shows recent filings (2021+)
+are ~100% HTML, so the nightly update parses everything it picks up; older
+filings are predominantly PDF (the entire 2008-2014 era sampled as PDF) and
+have no parsed parts, header, or `report_identity` row — capturing those
+would require PDF text extraction, not more HTML parsing. There is no second
+HTML markup: ~94 sampled reports were either Revised-2011 HTML or PDF, none
+other. Many HTML reports are also nil (no Part entries).
 
 - `amendment` — the full version chain of each amended filing, including
   the superseded versions the filer detail feed hides; backfilled from
