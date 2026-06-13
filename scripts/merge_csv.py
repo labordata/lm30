@@ -12,7 +12,7 @@
   linger as a ghost row.
 """
 
-from olms.merge import insert_rows, main
+from olms.merge import delete_by_rptid, incoming_rptids, insert_rows, main
 
 
 def merge_filing(conn, table, columns, rows):
@@ -24,6 +24,10 @@ def merge_filing(conn, table, columns, rows):
             (sr_filer_id, yr_covered),
         )
         deleted += cursor.rowcount
+    # belt and braces: if an rptId arrives under a different chain (e.g.
+    # OLMS corrects a filing's union relationship), evict it by rptId
+    # too rather than dying on the primary key
+    deleted += delete_by_rptid(conn, table, incoming_rptids(rows))
     return deleted, insert_rows(conn, table, columns, rows)
 
 

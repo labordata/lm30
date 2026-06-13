@@ -27,6 +27,10 @@ PRIOR_DB_URL ?= https://github.com/labordata/lm30/releases/download/nightly/lm30
 # them once here, explicitly. Discovery reads the filer table, so the
 # refresh comes first (no -j parallelism).
 update: lm30.db
+	# idempotent schema migration: the bootstrapped nightly may predate
+	# newer tables (e.g. part_a/part_b/part_c/amendment); everything in
+	# schema.sql is CREATE TABLE IF NOT EXISTS
+	sqlite3 lm30.db < schema.sql
 	rm -f filer.csv sr_nums.txt
 	$(MAKE) -f update.mk update_filer
 	$(MAKE) -f update.mk sr_nums.txt
