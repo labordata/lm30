@@ -30,6 +30,30 @@ CREATE TABLE IF NOT EXISTS "filing" (
    [file_checksum] TEXT,
    [file_status] TEXT
 );
+-- report_identity: the report header (form items 4 & 5), parsed from
+-- the LM-30 report HTML — the filer's own contact info and the labor
+-- organization they report against, neither of which is in the filing
+-- index feed. One row per filing whose HTML report we parsed (paper and
+-- pre-2011-markup filings have none), so it lives apart from the
+-- feed-dense filing table. Keyed by rptId (the current filing version);
+-- superseded-amendment orphans are swept with the part tables.
+CREATE TABLE IF NOT EXISTS "report_identity" (
+   [rptId] INTEGER PRIMARY KEY REFERENCES [filing]([rptId]),
+   [filer_name] TEXT,
+   [filer_street] TEXT,
+   [filer_city] TEXT,
+   [filer_state] TEXT,
+   [filer_zip] TEXT,
+   [filer_email] TEXT,
+   [filer_role] TEXT,
+   [filer_position_title] TEXT,
+   [union_name] TEXT,
+   [union_street] TEXT,
+   [union_city] TEXT,
+   [union_state] TEXT,
+   [union_zip] TEXT,
+   [union_file_number] TEXT
+);
 -- Part A/B/C: the report's disclosure blocks, parsed from the LM-30
 -- report HTML (orgReport.do), one row per entry. Keyed (rptId, order);
 -- rptId references the current filing version. Superseded-amendment

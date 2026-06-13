@@ -11,7 +11,7 @@ lm30.db : schema.sql filer.csv filing.csv form.json
 	python scripts/merge_csv.py $@ filer --replace --ignore filerType < filer.csv
 	python scripts/merge_csv.py $@ filing --ignore formLink --ignore detailed_form_data < filing.csv
 	python scripts/load_json.py $@ form.json
-	sqlite3 $@ "DELETE FROM represented_employer_interest WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM business_interest WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM other_employer_payment WHERE rptId NOT IN (SELECT rptId FROM filing);"
+	sqlite3 $@ "DELETE FROM report_identity WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM represented_employer_interest WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM business_interest WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM other_employer_payment WHERE rptId NOT IN (SELECT rptId FROM filing);"
 	python scripts/amended_chains.py $@ > amended_chains.txt
 	scrapy crawl amendments -L INFO -a chains_file=amended_chains.txt -O amendment.jl
 	jq -rs '(map(keys) | add | unique) as $$cols | map(. as $$row | $$cols | map($$row[.])) as $$rows | $$cols, $$rows[] | @csv' amendment.jl > amendment.csv

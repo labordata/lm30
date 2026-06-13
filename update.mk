@@ -64,7 +64,7 @@ update_filer: filer.csv | lm30.db
 update_filing: filing.csv form.json | lm30.db
 	python scripts/merge_csv.py lm30.db filing --ignore formLink --ignore detailed_form_data < filing.csv
 	python scripts/load_json.py lm30.db form.json
-	sqlite3 lm30.db "DELETE FROM represented_employer_interest WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM business_interest WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM other_employer_payment WHERE rptId NOT IN (SELECT rptId FROM filing);"
+	sqlite3 lm30.db "DELETE FROM report_identity WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM represented_employer_interest WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM business_interest WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM other_employer_payment WHERE rptId NOT IN (SELECT rptId FROM filing);"
 
 # ============================================================================
 # Spider outputs

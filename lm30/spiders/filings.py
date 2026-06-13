@@ -115,7 +115,21 @@ class LM30(Spider):
             content_type = None
 
         if content_type == "text/html" and b"rpt-part-name" in response.body:
-            item["detailed_form_data"] = LM30Report.parse(response)
+            try:
+                item["detailed_form_data"] = LM30Report.parse(response)
+            except HeaderShapeError as exc:
+                # the markup drifted or a non-2011 revision slipped the
+                # rpt-part-name filter — surface it loudly (a local
+                # scrape sees every occurrence) but keep the filing's
+                # index row rather than failing the whole crawl
+                self.logger.error(
+                    "report header shape mismatch for rptId %s (%s): %s",
+                    item["rptId"],
+                    response.request.url,
+                    exc,
+                )
+                self.crawler.stats.inc_value("lm30/header_shape_mismatch")
+                item["detailed_form_data"] = None
             yield item
             return
 
@@ -146,6 +160,12 @@ class IncrementalFilings(SrNumSpiderMixin, LM30):
     name = "filings_incremental"
 
 
+class HeaderShapeError(Exception):
+    """The report header's label layout differs from the Revised-2011
+    shape the parser was written against. Raised so a local scrape
+    surfaces the variant loudly instead of silently emitting nulls."""
+
+
 class LM30Report:
     """Parse the Part A/B/C disclosure blocks out of an LM-30 report
     (orgReport.do). The Revised-2011 markup is a YUI3 grid: each part is
@@ -156,11 +176,147 @@ class LM30Report:
 
     @classmethod
     def parse(cls, response):
+        # header is a 0-or-1-element list so the loader's flatten spec
+        # makes one report_identity row per filing (or none).
         return {
+            "header": [cls._header(response)],
             "part_a": cls._part_a(response),
             "part_b": cls._part_b(response),
             "part_c": cls._part_c(response),
         }
+
+    # -- report header (items 4 & 5) ----------------------------------
+
+    # The label-box texts the parser was written against, asserted on
+    # every report. A surprise (missing or extra label) means the markup
+    # drifted or a non-2011 revision slipped through the spider's filter;
+    # raising surfaces it loudly on a local scrape instead of silently
+    # emitting nulls.
+    FILER_LABELS = frozenset(
+        {
+            "Name (first, middle, last)",
+            "Street address",
+            "City State ZIP",
+            "Email address (optional)",
+        }
+    )
+    UNION_LABELS = frozenset(
+        {
+            "Name",
+            "Street address",
+            "City State ZIP",
+            "File number",
+            "Officer Employee",
+            "Your officer position or job title",
+        }
+    )
+
+    @classmethod
+    def _header(cls, response):
+        filer = response.xpath(
+            "//div[contains(@class,'rpt-instruction')]"
+            "[contains(., '4. Your Contact Information')]/parent::div"
+        )
+        union = response.xpath("//div[@id='fistUnion']")
+        if not filer or not union:
+            raise HeaderShapeError(
+                f"missing header section (filer={bool(filer)},"
+                f" union={bool(union)})"
+            )
+        cls._check_labels(filer, cls.FILER_LABELS, "item 4 (filer)")
+        cls._check_labels(union, cls.UNION_LABELS, "item 5 (labor org)")
+
+        fcity, fstate, fzip = cls._csz(filer)
+        ucity, ustate, uzip = cls._csz(union)
+        return {
+            "filer_name": cls._labeled(filer, "Name (first"),
+            "filer_street": cls._street(filer),
+            "filer_city": fcity,
+            "filer_state": fstate,
+            "filer_zip": fzip,
+            "filer_email": cls._labeled(filer, "Email address"),
+            "union_name": cls._labeled(union, "Name"),
+            "union_street": cls._street(union),
+            "union_city": ucity,
+            "union_state": ustate,
+            "union_zip": uzip,
+            "union_file_number": cls._labeled(union, "File number"),
+            "filer_role": cls._role(union),
+            "filer_position_title": cls._labeled(
+                union, "officer position or job title"
+            ),
+        }
+
+    @staticmethod
+    def _check_labels(scope, expected, where):
+        seen = set()
+        for box in scope.xpath(
+            ".//div[contains(@class,'rpt-instruction-box')]"
+        ):
+            label = " ".join(
+                " ".join(
+                    box.xpath(
+                        ".//text()[not(ancestor::*[contains(@class,'rpt-data')])]"
+                    ).getall()
+                ).split()
+            )
+            if label:
+                seen.add(label)
+        missing = expected - seen
+        extra = seen - expected
+        if missing or extra:
+            raise HeaderShapeError(
+                f"{where} label mismatch: missing={sorted(missing)},"
+                f" unexpected={sorted(extra)}"
+            )
+
+    @staticmethod
+    def _labeled(scope, contains):
+        return (
+            scope.xpath(
+                ".//div[contains(@class,'rpt-instruction-box')][contains(., $c)]"
+                "//*[contains(@class,'rpt-data')][1]//text()",
+                c=contains,
+            )
+            .get(default="")
+            .strip()
+        ) or None
+
+    @staticmethod
+    def _street(scope):
+        return (
+            scope.xpath(
+                ".//div[contains(@class,'rpt-instruction-box')]"
+                "[contains(., 'Street address')]"
+                "//*[contains(@class,'rpt-data')][1]//text()",
+            )
+            .get(default="")
+            .strip()
+        ) or None
+
+    @staticmethod
+    def _csz(scope):
+        spans = [
+            s.strip()
+            for s in scope.xpath(
+                ".//div[contains(@class,'rpt-instruction-box')]"
+                "[contains(., 'City') and contains(., 'State')"
+                " and contains(., 'ZIP')]"
+                "//span[contains(@class,'rpt-data')]/text()"
+            ).getall()
+        ]
+        return (spans + [None, None, None])[:3]
+
+    @staticmethod
+    def _role(union):
+        for role in ("Officer", "Employee"):
+            if union.xpath(
+                ".//div[normalize-space(text())=$r]"
+                "/following-sibling::div[1]//input[@checked]",
+                r=role,
+            ):
+                return role
+        return None
 
     @classmethod
     def _part_a(cls, response):

@@ -25,12 +25,15 @@ from olms.merge import load_tables
 
 PARTS_SPEC = [
     ("", Table("form", keys=("rptId",), emit=False)),
+    # header is a 0-or-1-element list -> one report_identity row, no order
+    ("*/header", Table("report_identity", keys=("rptId", None), list_base=1)),
     ("*/part_a", Table("represented_employer_interest", keys=("rptId", "entry_order"), list_base=1)),
     ("*/part_b", Table("business_interest", keys=("rptId", "entry_order"), list_base=1)),
     ("*/part_c", Table("other_employer_payment", keys=("rptId", "entry_order"), list_base=1)),
 ]
 
 ORDER = [
+    "report_identity",
     "represented_employer_interest",
     "business_interest",
     "other_employer_payment",

@@ -77,3 +77,42 @@ def test_part_c_absent_when_nil():
     # Part-A/B-only filings leave Part C empty.
     for name in ("941060.html", "942119.html", "941871.html"):
         assert LM30Report.parse(_report(name))["part_c"] == []
+
+
+def test_header_filer_and_union_identity():
+    h = LM30Report.parse(_report("942003.html"))["header"][0]
+    assert h["filer_name"] == "William T Mullen"
+    assert h["filer_street"] == "77 BRANT AVE SUITE 102,"
+    assert h["filer_city"] == "Clark"
+    assert h["filer_state"] == "NJ"
+    assert h["filer_zip"] == "07066"
+    assert h["filer_email"] == "njbctc@njbctc.org"
+    assert h["filer_role"] == "Officer"
+    assert h["filer_position_title"] == "President"
+    assert h["union_name"] == "BLDG AND CONSTRN TRADES DEPT AFL-CIO"
+    assert h["union_file_number"] == "049-389"
+    assert h["union_state"] == "NJ"
+
+
+def test_header_employee_role_and_title():
+    h = LM30Report.parse(_report("941060.html"))["header"][0]
+    assert h["filer_role"] == "Employee"
+    assert h["filer_position_title"] == "Chief Legal Officer, THINK450"
+    assert h["union_file_number"] == "068-015"
+
+
+def test_header_shape_mismatch_raises_loudly():
+    import re
+
+    from lm30.spiders.filings import HeaderShapeError
+
+    html = (FIXTURES / "942003.html").read_text()
+    # simulate OLMS renaming a header label (markup drift)
+    mangled = html.replace("Email address (optional)", "E-mail")
+    resp = HtmlResponse(url="x", body=mangled.encode(), encoding="utf-8")
+    try:
+        LM30Report.parse(resp)
+        assert False, "expected HeaderShapeError"
+    except HeaderShapeError as exc:
+        assert "item 4" in str(exc)
+        assert "E-mail" in str(exc) or "Email" in str(exc)
