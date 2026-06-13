@@ -28,7 +28,7 @@ PRIOR_DB_URL ?= https://github.com/labordata/lm30/releases/download/nightly/lm30
 # refresh comes first (no -j parallelism).
 update: lm30.db
 	# idempotent schema migration: the bootstrapped nightly may predate
-	# newer tables (e.g. part_a/part_b/part_c/amendment); everything in
+	# newer tables (e.g. the Part A/B/C disclosure tables, amendment);
 	# schema.sql is CREATE TABLE IF NOT EXISTS
 	sqlite3 lm30.db < schema.sql
 	rm -f filer.csv sr_nums.txt
@@ -64,7 +64,7 @@ update_filer: filer.csv | lm30.db
 update_filing: filing.csv form.json | lm30.db
 	python scripts/merge_csv.py lm30.db filing --ignore formLink --ignore detailed_form_data < filing.csv
 	python scripts/load_json.py lm30.db form.json
-	sqlite3 lm30.db "DELETE FROM part_a WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM part_b WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM part_c WHERE rptId NOT IN (SELECT rptId FROM filing);"
+	sqlite3 lm30.db "DELETE FROM represented_employer_interest WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM business_interest WHERE rptId NOT IN (SELECT rptId FROM filing); DELETE FROM other_employer_payment WHERE rptId NOT IN (SELECT rptId FROM filing);"
 
 # ============================================================================
 # Spider outputs

@@ -1,8 +1,10 @@
-"""Flatten the LM-30 report Part A/B/C blocks into the part_* tables.
+"""Flatten the LM-30 report Part A/B/C blocks into their tables.
 
 form.json is {rptId: {part_a: [...], part_b: [...], part_c: [...]}},
 derived from filing.jl (see common.mk). Each part is a list of entry
-dicts; the flatten spec turns them into part_a / part_b / part_c rows
+dicts keyed by the form's own part names; the flatten spec maps them to
+descriptively named tables (Part A -> represented_employer_interest,
+Part B -> business_interest, Part C -> other_employer_payment), rows
 keyed (rptId, order), merged in ONE transaction via
 olms.merge.load_tables (default strategy: delete the incoming rptIds and
 re-insert, so a re-crawl of a filing replaces its rows).
@@ -23,12 +25,16 @@ from olms.merge import load_tables
 
 PARTS_SPEC = [
     ("", Table("form", keys=("rptId",), emit=False)),
-    ("*/part_a", Table("part_a", keys=("rptId", "part_a_order"), list_base=1)),
-    ("*/part_b", Table("part_b", keys=("rptId", "part_b_order"), list_base=1)),
-    ("*/part_c", Table("part_c", keys=("rptId", "part_c_order"), list_base=1)),
+    ("*/part_a", Table("represented_employer_interest", keys=("rptId", "entry_order"), list_base=1)),
+    ("*/part_b", Table("business_interest", keys=("rptId", "entry_order"), list_base=1)),
+    ("*/part_c", Table("other_employer_payment", keys=("rptId", "entry_order"), list_base=1)),
 ]
 
-ORDER = ["part_a", "part_b", "part_c"]
+ORDER = [
+    "represented_employer_interest",
+    "business_interest",
+    "other_employer_payment",
+]
 
 
 def main():

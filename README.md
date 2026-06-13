@@ -25,15 +25,25 @@ included — a candidate `amendment` table for a later phase). The filing
 merge therefore evicts all prior versions of an incoming row's chain, so
 superseded versions never linger.
 
-This is the filing *index*, not the form contents: an LM-30's substance —
-the Part A/B/C disclosure blocks (interests in and payments from represented
-employers, business dealings with the union or its trusts, payments from
-other employers) — is nested, repeating data in the report HTML, like the
-sibling pipelines' `detailed_form_data`. Parsing it into `part_a`/`part_b`/
-`part_c` child tables is the planned second phase (the olms flatten/loader
-machinery is built for exactly that shape); note many filings are nil
-reports with no Part entries, and electronic filings span form revisions
-(the current markup is "Form LM-30 (Revised 2011)").
+The form contents — the disclosure blocks that are the LM-30's substance —
+are parsed from each electronic filing's report HTML into per-entry tables
+(a filing can disclose several of each):
+
+- `represented_employer_interest` (form Part A) — interests in, and
+  payments from, an employer whose employees the filer's union represents
+- `business_interest` (form Part B) — interests in businesses that deal
+  with the union, its trusts, or the represented employer
+- `other_employer_payment` (form Part C) — payments from other employers
+  that would raise a conflict
+
+Each is keyed `(rptId, entry_order)`. Caveats: many filings are nil reports
+with no entries; paper filings have no parseable report; and the parser
+handles the "Revised 2011" markup — older electronic filings' coverage is
+not yet measured.
+
+- `amendment` — the full version chain of each amended filing, including
+  the superseded versions the filer detail feed hides; backfilled from
+  GetLM30AmendmentReportsServlet during the full build.
 
 ## How it updates
 

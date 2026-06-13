@@ -35,9 +35,9 @@ CREATE TABLE IF NOT EXISTS "filing" (
 -- rptId references the current filing version. Superseded-amendment
 -- orphans (a chain version evicted from filing) are swept after load in
 -- the Makefile / update.mk.
-CREATE TABLE IF NOT EXISTS "part_a" (
+CREATE TABLE IF NOT EXISTS "represented_employer_interest" (
    [rptId] INTEGER REFERENCES [filing]([rptId]),
-   [part_a_order] INTEGER,
+   [entry_order] INTEGER,
    [represented_employer] TEXT,
    [contact_name] TEXT,
    [telephone] TEXT,
@@ -47,11 +47,11 @@ CREATE TABLE IF NOT EXISTS "part_a" (
    [zip] TEXT,
    [nature_of_interest] TEXT,
    [amount] TEXT,
-   PRIMARY KEY ([rptId], [part_a_order])
+   PRIMARY KEY ([rptId], [entry_order])
 );
-CREATE TABLE IF NOT EXISTS "part_b" (
+CREATE TABLE IF NOT EXISTS "business_interest" (
    [rptId] INTEGER REFERENCES [filing]([rptId]),
-   [part_b_order] INTEGER,
+   [entry_order] INTEGER,
    [business_name] TEXT,
    [contact_name] TEXT,
    [telephone] TEXT,
@@ -71,14 +71,14 @@ CREATE TABLE IF NOT EXISTS "part_b" (
    [value_of_dealings] TEXT,
    [nature_of_interest] TEXT,
    [amount_of_interest] TEXT,
-   PRIMARY KEY ([rptId], [part_b_order])
+   PRIMARY KEY ([rptId], [entry_order])
 );
 -- Part C: an other employer (or labor relations consultant) from whom a
 -- payment would create a conflict, with the entity type and the
 -- nature/amount of payment. (Part C labels its address "Mailing Address".)
-CREATE TABLE IF NOT EXISTS "part_c" (
+CREATE TABLE IF NOT EXISTS "other_employer_payment" (
    [rptId] INTEGER REFERENCES [filing]([rptId]),
-   [part_c_order] INTEGER,
+   [entry_order] INTEGER,
    [other_employer] TEXT,
    [contact_name] TEXT,
    [telephone] TEXT,
@@ -89,7 +89,7 @@ CREATE TABLE IF NOT EXISTS "part_c" (
    [entity_type] TEXT,
    [nature_of_payment] TEXT,
    [amount] TEXT,
-   PRIMARY KEY ([rptId], [part_c_order])
+   PRIMARY KEY ([rptId], [entry_order])
 );
 -- amendment: the full chain of each amended filing, including the
 -- superseded versions the filer detail feed hides (it serves only the
