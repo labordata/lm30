@@ -8,3 +8,6 @@ prev.zip
 sr_nums.txt
 .scrapy/
 reports/
+form.json
+filing.json
+amended_chains.txt

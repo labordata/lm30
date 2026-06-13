@@ -30,3 +30,109 @@ CREATE TABLE IF NOT EXISTS "filing" (
    [file_checksum] TEXT,
    [file_status] TEXT
 );
+-- report_identity: the report header (form items 4 & 5), parsed from
+-- the LM-30 report HTML — the filer's own contact info and the labor
+-- organization they report against, neither of which is in the filing
+-- index feed. One row per filing whose HTML report we parsed (paper and
+-- pre-2011-markup filings have none), so it lives apart from the
+-- feed-dense filing table. Keyed by rptId (the current filing version);
+-- superseded-amendment orphans are swept with the part tables.
+CREATE TABLE IF NOT EXISTS "report_identity" (
+   [rptId] INTEGER PRIMARY KEY REFERENCES [filing]([rptId]),
+   [filer_name] TEXT,
+   [filer_street] TEXT,
+   [filer_city] TEXT,
+   [filer_state] TEXT,
+   [filer_zip] TEXT,
+   [filer_email] TEXT,
+   [filer_role] TEXT,
+   [filer_position_title] TEXT,
+   [union_name] TEXT,
+   [union_street] TEXT,
+   [union_city] TEXT,
+   [union_state] TEXT,
+   [union_zip] TEXT,
+   [union_file_number] TEXT
+);
+-- Part A/B/C: the report's disclosure blocks, parsed from the LM-30
+-- report HTML (orgReport.do), one row per entry. Keyed (rptId, order);
+-- rptId references the current filing version. Superseded-amendment
+-- orphans (a chain version evicted from filing) are swept after load in
+-- the Makefile / update.mk.
+CREATE TABLE IF NOT EXISTS "represented_employer_interest" (
+   [rptId] INTEGER REFERENCES [filing]([rptId]),
+   [entry_order] INTEGER,
+   [represented_employer] TEXT,
+   [contact_name] TEXT,
+   [telephone] TEXT,
+   [street] TEXT,
+   [city] TEXT,
+   [state] TEXT,
+   [zip] TEXT,
+   [nature_of_interest] TEXT,
+   [amount] TEXT,
+   PRIMARY KEY ([rptId], [entry_order])
+);
+CREATE TABLE IF NOT EXISTS "business_interest" (
+   [rptId] INTEGER REFERENCES [filing]([rptId]),
+   [entry_order] INTEGER,
+   [business_name] TEXT,
+   [contact_name] TEXT,
+   [telephone] TEXT,
+   [street] TEXT,
+   [city] TEXT,
+   [state] TEXT,
+   [zip] TEXT,
+   [deals_with] TEXT,
+   [deals_with_name] TEXT,
+   [deals_with_contact_name] TEXT,
+   [deals_with_telephone] TEXT,
+   [deals_with_street] TEXT,
+   [deals_with_city] TEXT,
+   [deals_with_state] TEXT,
+   [deals_with_zip] TEXT,
+   [nature_of_dealings] TEXT,
+   [value_of_dealings] TEXT,
+   [nature_of_interest] TEXT,
+   [amount_of_interest] TEXT,
+   PRIMARY KEY ([rptId], [entry_order])
+);
+-- Part C: an other employer (or labor relations consultant) from whom a
+-- payment would create a conflict, with the entity type and the
+-- nature/amount of payment. (Part C labels its address "Mailing Address".)
+CREATE TABLE IF NOT EXISTS "other_employer_payment" (
+   [rptId] INTEGER REFERENCES [filing]([rptId]),
+   [entry_order] INTEGER,
+   [other_employer] TEXT,
+   [contact_name] TEXT,
+   [telephone] TEXT,
+   [street] TEXT,
+   [city] TEXT,
+   [state] TEXT,
+   [zip] TEXT,
+   [entity_type] TEXT,
+   [nature_of_payment] TEXT,
+   [amount] TEXT,
+   PRIMARY KEY ([rptId], [entry_order])
+);
+-- amendment: the full chain of each amended filing, including the
+-- superseded versions the filer detail feed hides (it serves only the
+-- latest). Each version keeps its own rptId; the latest version's row
+-- duplicates filing. Join history to the current filing on
+-- (srFilerId, yrCovered). Backfilled from GetLM30AmendmentReportsServlet
+-- for chains where filing.amended = 'Y'.
+CREATE TABLE IF NOT EXISTS "amendment" (
+   [rptId] INTEGER PRIMARY KEY,
+   [srFilerId] INTEGER REFERENCES [filer]([srFilerId]),
+   [yrCovered] INTEGER,
+   [amendment] INTEGER,
+   [amended] TEXT,
+   [beginDate] TEXT,
+   [endDate] TEXT,
+   [receiveDate] TEXT,
+   [formFiled] TEXT,
+   [unionName] TEXT,
+   [unionCity] TEXT,
+   [unionState] TEXT,
+   [filing_url] TEXT
+);
